@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import TaskService from "../services/TaskService";
+import { addSchema, deleteSchema, getIDSchema, GetSchema, updateSchema } from "../schemas/TaskSchema";
 
 const taskService = new TaskService();
 
@@ -9,87 +10,88 @@ class TaskController{
 
     }
 
-    get(req: Request, res: Response){
-        const status = req.query.status;
+    async get(req: Request, res: Response){
 
-        if(status && (status === 'in_progress' || status === 'completed')){
+        try {
+            const status = req.query.status;
+            await GetSchema.validate(req.query);
 
-            const result = taskService.get(status);
+            const result = taskService.get(status as string);
             res.json(result);
-            
-
-        }else{
-            res.status(400).json({error: 'invalid status parameter'});
+        } catch (error) {
+            res.status(400).json({error: error});
         }
+            
     }
 
-    getID(req: Request, res: Response){
+    async getID(req: Request, res: Response){
         const { id_task } = req.params;
 
-        if(id_task){
-            
+        try {
+
+            await getIDSchema.validate(req.params);
+
             const result = taskService.getID(id_task);
             res.json(result);
-        } else {
-            res.status(400).json({error: 'invalid task id'})
+        } catch (error) {
+            res.status(400).json({error: error})
         }
+
     }
 
-    add(req: Request, res: Response){
-        const {id, about, data, status} = req.body;
-        const authorization = req.headers.authorization;
+    async add(req: Request, res: Response){
 
-        if(!authorization){
-            res.status(401).json({error: 'Unauthorized Access!'})
-        } else {
-            if(id && about && data && status){
-                if(status === 'completed' || status === 'in_progress'){
-                    res.status(201).json({message: 'Task created with successful!'})
-                } else {
-                    res.status(400).json({error: 'Invalid Status!'});
-                }
-            } else {
-                res.status(400).json({error: 'Bad Request!'})
-            }
+        try {
+
+            await addSchema.validate(req.body);
+
+            res.status(201).json({message: 'Task created with successful!'})
+            await taskService.add(req.body);
+        } catch (error) {
+            res.status(400).json({error: error});
         }
     }
 
     async update(req: Request, res: Response) {
+        const { id_task } = req.params;
+        
         try {
-            const { id, about, data, status } = req.body;
-            const { id_task } = req.params;
-    
-            if (!id || !about || !data || !status || !id_task) {
-                return res.status(400).json({ error: 'Invalid parameters' });
+            
+            await updateSchema.validate(req.body, req.params);
+
+            const update = await taskService.update(req.body, id_task);
+
+            if(!update){
+                res.status(400).json({error: 'task not found'});
+            } else{
+                return res.status(200).json({ message: 'Task updated successfully' });
             }
-    
-            if (status !== 'in_progress' && status !== 'completed') {
-                return res.status(400).json({ error: 'Invalid status' });
-            }
-    
-            await taskService.update(req.body, id_task);
-            return res.status(200).json({ message: 'Task updated successfully' });
     
         } catch (error) {
-            return res.status(500).json({ error: 'Internal server error'});
+            return res.status(500).json({ error: error});
         }
     }
 
-    delete(req: Request, res: Response){
-        const { id_task } = req.params;
+    async delete(req: Request, res: Response){
+        
+        try {
+            const { id_task } = req.params;
+            
+            await deleteSchema.validate(id_task);
 
-        if(id_task){
+            const result = await taskService.delete(id_task);
 
-            try {
-                const result = taskService.delete(id_task);
-                res.status(200).send({message: 'OK!'}); 
-            } catch (error) {
-                res.status(404).json({ error: '404 Not Found' });
+            if (result) {
+                return res.status(200).send({ message: 'OK!' });
+            } else {
+                return res.status(404).json({ error: 'Task not found' });
             }
 
-        } else {
-            res.status(400).json({error: 'please select a valid id'})
+        } catch (error) {
+            res.status(404).json({ error: error});
         }
+
+        
     }
 }
 

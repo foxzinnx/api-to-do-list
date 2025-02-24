@@ -37,8 +37,8 @@ class TaskService{
         return task;
     }
 
-    async add(data: Task): Promise<Task>{
-        return await taskRepository.add(data);
+    add(data: Task): Task{
+        return taskRepository.add(data);
     }
 
     getIndex(id_task: string): number{
@@ -54,26 +54,25 @@ class TaskService{
         return position;
     }
 
-    async update(data: Task, id_task: string) {
+    update(data: Task, id_task: string) {
 
         const position = this.getIndex(id_task);
 
         if(position !== -1){
-            return await taskRepository.update(data, position);
+            return taskRepository.update(data, position);
         }else{
-            return {}
+            return {};
         }
 
     }
 
-    async delete(id_task: string) {
+    delete(id_task: string) {
         const position = this.getIndex(id_task);
     
         if (position !== -1) { 
-            await taskRepository.delete(position);
-            return true;
+            return taskRepository.delete(position); 
         } else {
-            return false;
+            throw new Error(`Task with id ${id_task} not found`); 
         }
     }
 }
